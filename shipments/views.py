@@ -8,6 +8,7 @@ from .serializers import (
     ContainerSerializer,
     ShipmentSerializer
 )
+from django.db.models import ProtectedError
 
 
 class CustomerListCreateView(generics.ListCreateAPIView):
@@ -19,6 +20,15 @@ class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
 
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'Cannot delete this customer because they have shipments attached. Remove the shipments first.'},
+                status=status.HTTP_409_CONFLICT
+            )
+
 
 class ContainerListCreateView(generics.ListCreateAPIView):
     queryset = Container.objects.all().order_by('-created_at')
@@ -28,6 +38,15 @@ class ContainerListCreateView(generics.ListCreateAPIView):
 class ContainerDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Container.objects.all()
     serializer_class = ContainerSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'Cannot delete this container because it has shipments attached. Remove the shipments first.'},
+                status=status.HTTP_409_CONFLICT
+            )
 
 
 class ShipmentListCreateView(generics.ListCreateAPIView):
