@@ -9,6 +9,8 @@ from .serializers import (
     ShipmentSerializer
 )
 from django.db.models import ProtectedError
+from django.core.cache import cache
+from django.conf import settings
 
 
 class CustomerListCreateView(generics.ListCreateAPIView):
@@ -57,6 +59,30 @@ class ShipmentListCreateView(generics.ListCreateAPIView):
             'customer', 'container'
         ).all().order_by('-created_at')
 
+    def list(self, request, *args, **kwargs):
+        cache_key = 'shipment_list'
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response({
+                'source': 'cache',
+                'data': cached_data
+            })
+
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+
+        cache.set(cache_key, serializer.data, settings.CACHE_TTL)
+
+        return Response({
+            'source': 'database',
+            'data': serializer.data
+        })
+
+    def perform_create(self, serializer):
+        serializer.save()
+        cache.delete('shipment_list')
+
 
 class ShipmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ShipmentSerializer
@@ -65,6 +91,14 @@ class ShipmentDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Shipment.objects.select_related(
             'customer', 'container'
         ).all()
+
+    def perform_update(self, serializer):
+        serializer.save()
+        cache.delete('shipment_list')
+
+    def perform_destroy(self, instance):
+        instance.delete()
+        cache.delete('shipment_list')
 
 
 class ShipmentStatusUpdateView(APIView):
@@ -81,5 +115,6 @@ class ShipmentStatusUpdateView(APIView):
 
         shipment.status = new_status
         shipment.save()
+        cache.delete('shipment_list')
         serializer = ShipmentSerializer(shipment)
         return Response(serializer.data)
