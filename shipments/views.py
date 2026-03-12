@@ -11,6 +11,7 @@ from .serializers import (
 from django.db.models import ProtectedError
 from django.core.cache import cache
 from django.conf import settings
+from .tasks import send_shipment_notification
 
 
 class CustomerListCreateView(generics.ListCreateAPIView):
@@ -80,8 +81,10 @@ class ShipmentListCreateView(generics.ListCreateAPIView):
         })
 
     def perform_create(self, serializer):
-        serializer.save()
+        shipment = serializer.save()
         cache.delete('shipment_list')
+        # Fire async notification — doesn't make client wait
+        send_shipment_notification.delay(shipment.id, 'created')
 
 
 class ShipmentDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -116,5 +119,7 @@ class ShipmentStatusUpdateView(APIView):
         shipment.status = new_status
         shipment.save()
         cache.delete('shipment_list')
+        # Fire async notification
+        send_shipment_notification.delay(shipment.id, new_status)
         serializer = ShipmentSerializer(shipment)
         return Response(serializer.data)

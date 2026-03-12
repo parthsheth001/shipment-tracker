@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+    'django_celery_results',
+    'django_celery_beat',
     'shipments',
 ]
 
@@ -169,3 +171,12 @@ CACHE_TTL = 60 * 5  # 5 minutes
 # Rate limiting settings
 RATE_LIMIT_REQUESTS = 100  # requests
 RATE_LIMIT_WINDOW = 60     # per 60 seconds
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('RABBITMQ_URL', 'amqp://shipment_user:shipment_pass@localhost:5672/')
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Toronto'

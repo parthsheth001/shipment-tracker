@@ -15,5 +15,14 @@ services:
     ports:
       - "6379:6379"
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: shipment_user
+      RABBITMQ_DEFAULT_PASS: shipment_pass
+    ports:
+      - "5672:5672"    # RabbitMQ main port
+      - "15672:15672"  # Management dashboard
+
 volumes:
   postgres_data:
