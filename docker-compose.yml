@@ -21,8 +21,20 @@ services:
       RABBITMQ_DEFAULT_USER: shipment_user
       RABBITMQ_DEFAULT_PASS: shipment_pass
     ports:
-      - "5672:5672"    # RabbitMQ main port
-      - "15672:15672"  # Management dashboard
+      - "5672:5672"
+      - "15672:15672"
+
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
 
 volumes:
   postgres_data:
+  elasticsearch_data:

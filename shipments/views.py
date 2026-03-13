@@ -12,6 +12,7 @@ from django.db.models import ProtectedError
 from django.core.cache import cache
 from django.conf import settings
 from .tasks import send_shipment_notification
+from .documents import ShipmentDocument
 
 
 class CustomerListCreateView(generics.ListCreateAPIView):
@@ -123,3 +124,70 @@ class ShipmentStatusUpdateView(APIView):
         send_shipment_notification.delay(shipment.id, new_status)
         serializer = ShipmentSerializer(shipment)
         return Response(serializer.data)
+
+
+class ShipmentSearchView(APIView):
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        status_filter = request.query_params.get('status', '').strip()
+        min_weight = request.query_params.get('min_weight', None)
+        max_weight = request.query_params.get('max_weight', None)
+
+        if not query and not status_filter and not min_weight and not max_weight:
+            return Response(
+                {'error': 'Provide at least one search parameter: q, status, min_weight, max_weight'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Start with a search object
+        search = ShipmentDocument.search()
+
+        # Full text search across multiple fields
+        if query:
+            search = search.query(
+                'multi_match',
+                query=query,
+                fields=[
+                    'tracking_number',
+                    'origin',
+                    'destination',
+                    'customer_name',
+                    'container_number',
+                ]
+            )
+
+        # Filter by status (exact match)
+        if status_filter:
+            search = search.filter('term', status=status_filter)
+
+        # Filter by weight range
+        if min_weight or max_weight:
+            weight_range = {}
+            if min_weight:
+                weight_range['gte'] = float(min_weight)
+            if max_weight:
+                weight_range['lte'] = float(max_weight)
+            search = search.filter('range', weight_kg=weight_range)
+
+        # Execute search
+        response = search.execute()
+
+        # Format results
+        results = []
+        for hit in response:
+            results.append({
+                'id': hit.meta.id,
+                'tracking_number': hit.tracking_number,
+                'origin': hit.origin,
+                'destination': hit.destination,
+                'status': hit.status,
+                'customer_name': hit.customer_name,
+                'container_number': hit.container_number,
+                'weight_kg': hit.weight_kg,
+                'score': hit.meta.score,
+            })
+
+        return Response({
+            'total': response.hits.total.value,
+            'results': results
+        })
