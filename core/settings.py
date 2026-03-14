@@ -194,3 +194,6 @@ import sys
 if 'test' in sys.argv or os.getenv('ELASTICSEARCH_DSL_AUTOSYNC') == 'False':
     ELASTICSEARCH_DSL_SIGNAL_PROCESSOR = 'django_elasticsearch_dsl.signals.BaseSignalProcessor'
     ELASTICSEARCH_DSL_AUTO_REFRESH = False
+    # Run Celery tasks synchronously during tests — no broker needed
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
