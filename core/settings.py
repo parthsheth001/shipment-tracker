@@ -188,3 +188,8 @@ ELASTICSEARCH_DSL = {
         'hosts': 'http://localhost:9200'
     }
 }
+
+# Use dummy signal processor during tests
+import sys
+if 'test' in sys.argv:
+    ELASTICSEARCH_DSL_SIGNAL_PROCESSOR = 'django_elasticsearch_dsl.signals.BaseSignalProcessor'
