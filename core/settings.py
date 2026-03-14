@@ -185,11 +185,12 @@ CELERY_TIMEZONE = 'America/Toronto'
 # Elasticsearch Configuration
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'http://localhost:9200'
+        'hosts': os.getenv('ELASTICSEARCH_HOST', 'http://localhost:9200')
     }
 }
 
-# Use dummy signal processor during tests
+# Disable auto sync during tests
 import sys
-if 'test' in sys.argv:
+if 'test' in sys.argv or os.getenv('ELASTICSEARCH_DSL_AUTOSYNC') == 'False':
     ELASTICSEARCH_DSL_SIGNAL_PROCESSOR = 'django_elasticsearch_dsl.signals.BaseSignalProcessor'
+    ELASTICSEARCH_DSL_AUTO_REFRESH = False
